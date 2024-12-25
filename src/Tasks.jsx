@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PlusCircle, MoreVertical, Clock, Loader2, CheckCircle2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
-const Tasks = ({socket}) => {
+const Tasks = ({ socket }) => {
   const [tasks, setTasks] = useState({
     pending: [
       { id: 1, title: 'Research competitor products', description: 'Analyze top 3 competitors', priority: 'High' },
@@ -25,30 +25,44 @@ const Tasks = ({socket}) => {
 
     socket.on('task:move', (data) => {
       setTasks(prev => {
-        const task = prev[data.sourceColumn].find(t => t.id === data.taskId);
+        const { taskId, targetColumn } = data;
+        let foundTask;
+        for (let status in tasks) {
+          for (let task of tasks[status]) {
+            if (task.id === taskId) {
+              foundTask = {
+                status, task
+              };
+            }
+          }
+        }
+        let sourceColumn = foundTask.status;
+        if (sourceColumn === targetColumn)
+          return;
+
         return {
           ...prev,
-          [data.sourceColumn]: prev[data.sourceColumn].filter(t => t.id !== data.taskId),
-          [data.targetColumn]: [...prev[data.targetColumn], task],
-        };
+          [sourceColumn]: tasks[sourceColumn].filter(t => t.id !== taskId),
+          [targetColumn]: [...tasks[targetColumn], foundTask.task],
+        }
       });
     });
 
     socket.on('task:edit', data => {
-      const {status, field, value, taskId} = data;
+      const { status, field, value, taskId } = data;
       setTasks(prev => {
         return {
           ...prev,
           [status]: prev[status].map(task => {
-            if(task.id === taskId) {
+            if (task.id === taskId) {
               task[field] = value;
             }
-            return task;  
+            return task;
           })
         }
       })
     })
-    
+
     return () => {
       socket.off('task:move');
       socket.off('initial:state');
@@ -151,7 +165,7 @@ const Tasks = ({socket}) => {
         };
     }
   };
-  
+
   const onChangeTitleOrDescription = (status, taskId, field, value) => {
     setTasks(prev => {
       const updatedTasks = { ...prev };
@@ -212,7 +226,7 @@ const Tasks = ({socket}) => {
                       onKeyDown={(e) => handleKeyDown(e, status, task.id, 'title', e.target.value)}
                     />
                   ) : (
-                    <CardTitle 
+                    <CardTitle
                       className="text-sm font-medium cursor-pointer hover:text-blue-600"
                       onClick={() => setEditing({ id: task.id, field: 'title' })}
                     >
@@ -240,7 +254,7 @@ const Tasks = ({socket}) => {
                     onKeyDown={(e) => handleKeyDown(e, status, task.id, 'description', e.target.value)}
                   />
                 ) : (
-                  <p 
+                  <p
                     className="text-sm text-gray-500 mb-2 cursor-pointer hover:text-blue-600"
                     onClick={() => setEditing({ id: task.id, field: 'description' })}
                   >
