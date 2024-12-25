@@ -35,7 +35,6 @@ const Tasks = ({socket}) => {
     });
 
     socket.on('task:edit', data => {
-      console.log(data);
       const {status, field, value, taskId} = data;
       setTasks(prev => {
         return {
@@ -53,6 +52,7 @@ const Tasks = ({socket}) => {
     return () => {
       socket.off('task:move');
       socket.off('initial:state');
+      socket.off('task:edit');
     };
   }, [socket]);
 
