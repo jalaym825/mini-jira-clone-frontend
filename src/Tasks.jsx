@@ -120,8 +120,6 @@ const Tasks = ({ socket }) => {
     }
     let sourceColumn = foundTask.status;
 
-    console.log(taskId, sourceColumn, targetColumn);
-
     if (sourceColumn === targetColumn) return;
 
     socket.emit('task:move', { taskId, targetColumn });
