@@ -16,6 +16,7 @@ const Tasks = ({socket}) => {
     ],
   });
 
+  const [editing, setEditing] = useState({ id: null, field: null });
 
   useEffect(() => {
     socket.on('initial:state', (initialTasks) => {
@@ -23,7 +24,6 @@ const Tasks = ({socket}) => {
     });
 
     socket.on('task:move', (data) => {
-      console.log(data)
       setTasks(prev => {
         const task = prev[data.sourceColumn].find(t => t.id === data.taskId);
         return {
@@ -33,15 +33,52 @@ const Tasks = ({socket}) => {
         };
       });
     });
-    // Cleanup listeners on unmount
+
+    socket.on('task:edit', data => {
+      console.log(data);
+      const {status, field, value, taskId} = data;
+      setTasks(prev => {
+        return {
+          ...prev,
+          [status]: prev[status].map(task => {
+            if(task.id === taskId) {
+              task[field] = value;
+            }
+            return task;  
+          })
+        }
+      })
+    })
+    
     return () => {
       socket.off('task:move');
       socket.off('initial:state');
     };
   }, [socket]);
 
+  const handleEdit = (status, taskId, field, value) => {
+    setTasks(prev => {
+      const updatedTasks = { ...prev };
+      const taskIndex = updatedTasks[status].findIndex(t => t.id === taskId);
+      if (taskIndex !== -1) {
+        updatedTasks[status][taskIndex] = {
+          ...updatedTasks[status][taskIndex],
+          [field]: value
+        };
+      }
+      return updatedTasks;
+    });
+  };
+
+  const handleKeyDown = (e, status, taskId, field, value) => {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      handleEdit(status, taskId, field, value);
+      setEditing({ id: null, field: null });
+    }
+  };
 
   const handleDragStart = (e, taskId, sourceColumn) => {
+    if (editing.id) return;
     e.dataTransfer.setData('taskId', taskId);
     e.dataTransfer.setData('sourceColumn', sourceColumn);
   };
@@ -71,14 +108,10 @@ const Tasks = ({socket}) => {
 
   const getPriorityColor = (priority) => {
     switch (priority.toLowerCase()) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'high': return 'bg-red-100 text-red-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -119,6 +152,10 @@ const Tasks = ({socket}) => {
     }
   };
 
+  const onChangeTitleOrDescription = (status, taskId, field, value) => {
+    socket.emit('task:edit', { status, taskId, field, value });
+  };
+
   const Column = ({ title, tasks, status }) => {
     const styles = getColumnStyles(status);
 
@@ -148,14 +185,58 @@ const Tasks = ({socket}) => {
             >
               <CardHeader className="p-4 pb-2">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
+                  {editing.id === task.id && editing.field === 'title' ? (
+                    <input
+                      type="text"
+                      className="flex-1 p-1 text-sm font-medium border rounded"
+                      defaultValue={task.title}
+                      autoFocus
+                      onChange={(e) => {
+                        onChangeTitleOrDescription(status, task.id, 'title', e.target.value);
+                      }}
+                      onBlur={(e) => {
+                        handleEdit(status, task.id, 'title', e.target.value);
+                        setEditing({ id: null, field: null });
+                      }}
+                      onKeyDown={(e) => handleKeyDown(e, status, task.id, 'title', e.target.value)}
+                    />
+                  ) : (
+                    <CardTitle 
+                      className="text-sm font-medium cursor-pointer hover:text-blue-600"
+                      onClick={() => setEditing({ id: task.id, field: 'title' })}
+                    >
+                      {task.title}
+                    </CardTitle>
+                  )}
                   <button className="text-gray-400 hover:text-gray-600">
                     <MoreVertical size={16} />
                   </button>
                 </div>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <p className="text-sm text-gray-500 mb-2">{task.description}</p>
+                {editing.id === task.id && editing.field === 'description' ? (
+                  <input
+                    type="text"
+                    className="w-full p-1 text-sm border rounded mb-2"
+                    defaultValue={task.description}
+                    onChange={(e) => {
+                      onChangeTitleOrDescription(status, task.id, 'description', e.target.value);
+                    }}
+                    autoFocus
+                    onBlur={(e) => {
+                      handleEdit(status, task.id, 'description', e.target.value);
+                      setEditing({ id: null, field: null });
+                    }}
+                    onKeyDown={(e) => handleKeyDown(e, status, task.id, 'description', e.target.value)}
+                  />
+                ) : (
+                  <p 
+                    className="text-sm text-gray-500 mb-2 cursor-pointer hover:text-blue-600"
+                    onClick={() => setEditing({ id: task.id, field: 'description' })}
+                  >
+                    {task.description}
+                  </p>
+                )}
                 <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(task.priority)}`}>
                   {task.priority}
                 </span>
@@ -182,7 +263,7 @@ const Tasks = ({socket}) => {
         </button>
       </div>
 
-      <div className="flex gap-16 justify-center ">
+      <div className="flex gap-16 justify-center">
         <Column title="Pending" tasks={tasks.pending} status="pending" />
         <Column title="In Progress" tasks={tasks.working} status="working" />
         <Column title="Completed" tasks={tasks.completed} status="completed" />
