@@ -5,7 +5,7 @@ import Component from './Component';
 import Tasks from './Tasks';
 
 const EditableCard = () => {
-  let socket= io("http://localhost:3000", {
+  let socket= io(import.meta.env.VITE_API_URL, {
     query: {
       roomId: window.location.pathname.slice(1)
     }
