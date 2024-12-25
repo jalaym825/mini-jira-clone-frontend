@@ -26,17 +26,13 @@ const Tasks = ({ socket }) => {
     socket.on('task:move', (data) => {
       setTasks(prev => {
         const { taskId, targetColumn } = data;
-        console.log(taskId, targetColumn);
         let foundTask;
         for (let status in prev) {
-          console.log(status)
           for (let task of prev[status]) {
-            console.log(task)
             if (task.id === taskId) {
               foundTask = {
                 status, task
               };
-              console.log(foundTask)
             }
           }
         }
