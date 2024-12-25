@@ -26,24 +26,28 @@ const Tasks = ({ socket }) => {
     socket.on('task:move', (data) => {
       setTasks(prev => {
         const { taskId, targetColumn } = data;
+        console.log(taskId, targetColumn);
         let foundTask;
-        for (let status in tasks) {
-          for (let task of tasks[status]) {
+        for (let status in prev) {
+          console.log(status)
+          for (let task of prev[status]) {
+            console.log(task)
             if (task.id === taskId) {
               foundTask = {
                 status, task
               };
+              console.log(foundTask)
             }
           }
         }
         let sourceColumn = foundTask.status;
         if (sourceColumn === targetColumn)
-          return;
+          return prev;
 
         return {
           ...prev,
-          [sourceColumn]: tasks[sourceColumn].filter(t => t.id !== taskId),
-          [targetColumn]: [...tasks[targetColumn], foundTask.task],
+          [sourceColumn]: prev[sourceColumn].filter(t => t.id !== taskId),
+          [targetColumn]: [...prev[targetColumn], foundTask.task],
         }
       });
     });
