@@ -108,11 +108,23 @@ const Tasks = ({ socket }) => {
   const handleDrop = (e, targetColumn) => {
     e.preventDefault();
     const taskId = parseInt(e.dataTransfer.getData('taskId'));
-    const sourceColumn = e.dataTransfer.getData('sourceColumn');
+    let foundTask;
+    for (let status in prev) {
+      for (let task of prev[status]) {
+        if (task.id === taskId) {
+          foundTask = {
+            status, task
+          };
+        }
+      }
+    }
+    let sourceColumn = foundTask.status;
+
+    console.log(taskId, sourceColumn, targetColumn);
 
     if (sourceColumn === targetColumn) return;
 
-    socket.emit('task:move', { taskId, sourceColumn, targetColumn });
+    socket.emit('task:move', { taskId, targetColumn });
 
     setTasks(prev => {
       const task = prev[sourceColumn].find(t => t.id === taskId);
