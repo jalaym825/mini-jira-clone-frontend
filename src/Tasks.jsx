@@ -109,8 +109,8 @@ const Tasks = ({ socket }) => {
     e.preventDefault();
     const taskId = parseInt(e.dataTransfer.getData('taskId'));
     let foundTask;
-    for (let status in prev) {
-      for (let task of prev[status]) {
+    for (let status in tasks) {
+      for (let task of tasks[status]) {
         if (task.id === taskId) {
           foundTask = {
             status, task
