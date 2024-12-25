@@ -151,8 +151,20 @@ const Tasks = ({socket}) => {
         };
     }
   };
-
+  
   const onChangeTitleOrDescription = (status, taskId, field, value) => {
+    setTasks(prev => {
+      const updatedTasks = { ...prev };
+      const taskIndex = updatedTasks[status].findIndex(t => t.id === taskId);
+      if (taskIndex !== -1) {
+        updatedTasks[status][taskIndex] = {
+          ...updatedTasks[status][taskIndex],
+          [field]: value
+        };
+      }
+      return updatedTasks;
+    });
+
     socket.emit('task:edit', { status, taskId, field, value });
   };
 
@@ -195,7 +207,6 @@ const Tasks = ({socket}) => {
                         onChangeTitleOrDescription(status, task.id, 'title', e.target.value);
                       }}
                       onBlur={(e) => {
-                        handleEdit(status, task.id, 'title', e.target.value);
                         setEditing({ id: null, field: null });
                       }}
                       onKeyDown={(e) => handleKeyDown(e, status, task.id, 'title', e.target.value)}
@@ -224,7 +235,6 @@ const Tasks = ({socket}) => {
                     }}
                     autoFocus
                     onBlur={(e) => {
-                      handleEdit(status, task.id, 'description', e.target.value);
                       setEditing({ id: null, field: null });
                     }}
                     onKeyDown={(e) => handleKeyDown(e, status, task.id, 'description', e.target.value)}
